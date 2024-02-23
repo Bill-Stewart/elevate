@@ -1,4 +1,4 @@
-{ Copyright (C) 2021 by Bill Stewart (bstewart at iname.com)
+{ Copyright (C) 2021-2024 by Bill Stewart (bstewart at iname.com)
 
   This program is free software: you can redistribute it and/or modify it under
   the terms of the GNU General Public License as published by the Free Software
@@ -15,27 +15,24 @@
 
 }
 
-{$MODE OBJFPC}
-{$H+}
-
 unit wsProcess;
+
+{$MODE OBJFPC}
+{$MODESWITCH UNICODESTRINGS}
 
 interface
 
 uses
-  Windows;
+  windows;
 
 type
-  TWindowStyle = (Hidden             = SW_HIDE,
-                  Normal             = SW_SHOWNORMAL,
-                  Minimized          = SW_SHOWMINIMIZED,
-                  Maximized          = SW_SHOWMAXIMIZED,
-                  NormalNotActive    = SW_SHOWNOACTIVATE,
-                  MinimizedNotActive = SW_SHOWMINNOACTIVE);
-
-// Gets the (unparsed) content of the command line starting at the specified
-// parameter.
-function GetCommandTail(const StartParam: LongInt): UnicodeString;
+  TWindowStyle = (
+    Hidden             = SW_HIDE,
+    Normal             = SW_SHOWNORMAL,
+    Minimized          = SW_SHOWMINIMIZED,
+    Maximized          = SW_SHOWMAXIMIZED,
+    NormalNotActive    = SW_SHOWNOACTIVATE,
+    MinimizedNotActive = SW_SHOWMINNOACTIVE);
 
 // Returns 0 if all APIs executed successfully. If any API failed, returns the
 // error code of the API that failed. If the function returns 0, then Elevated
@@ -47,8 +44,9 @@ function IsElevated(var Elevated: Boolean): DWORD;
 // false, then ResultCode will contain the error code returned by the API that
 // failed. If the function returns true, then the value in ResultCode will be 0 
 // if Wait is false or the program's exit code if Wait is true.
-function ShellExec(const Executable, Parameters, WorkingDirectory: UnicodeString;
-  const WindowStyle: TWindowStyle; const Wait, Quiet, Elevate: Boolean; var ResultCode: DWORD): Boolean;
+function ShellExec(const Executable, Parameters, WorkingDirectory: string;
+  const WindowStyle: TWindowStyle; const Wait, Quiet, Elevate: Boolean;
+  out ResultCode: DWORD): Boolean;
 
 implementation
 
@@ -94,7 +92,9 @@ type
     hProcess:     HANDLE;
   end;
 
-function CheckTokenMembership(TokenHandle: HANDLE; SidToCheck: PSID; var IsMember: Boolean): BOOL; stdcall;
+function CheckTokenMembership(TokenHandle: HANDLE;
+  SidToCheck: PSID;
+  out IsMember: Boolean): BOOL; stdcall;
   external 'advapi32.dll';
 
 function ShellExecuteExW(var ShellExecuteInfo: TShellExecuteInfo): BOOL; stdcall;
@@ -122,7 +122,9 @@ begin
     if CheckTokenMembership(0,       // HANDLE TokenHandle
       pSidLocalAdministratorsGroup,  // PSID   SidToCheck
       Elevated) then                 // PBOOL  IsMember
-      result := ERROR_SUCCESS
+    begin
+      result := ERROR_SUCCESS;
+    end
     else
       result := GetLastError();
     FreeSid(pSidLocalAdministratorsGroup);  // PSID pSid
@@ -131,93 +133,43 @@ begin
     result := GetLastError();
 end;
 
-function GetCommandTail(const StartParam: LongInt): UnicodeString;
-const
-  WHITESPACE: set of Char = [#9, #32];
+function ShellExec(const Executable, Parameters, WorkingDirectory: string;
+  const WindowStyle: TWindowStyle; const Wait, Quiet, Elevate: Boolean;
+  out ResultCode: DWORD): Boolean;
 var
-  pCL, pTail: PWideChar;
-  InQuote: Boolean;
-  ParamNum, I: LongInt;
+  SEI: TShellExecuteInfo;
 begin
-  pCL := GetCommandLineW();
-  pTail := nil;
-  if pCL^ <> #0 then
-  begin
-    while pCL^ in WHITESPACE do  // Skip leading whitespace
-      Inc(pCL);
-    InQuote := false;
-    pTail := pCL;
-    ParamNum := 0;
-    for I := 0 to Length(pCL) do
-    begin
-      case pCL[I] of
-        #0:
-          break;
-        '"':
-        begin
-          InQuote := not InQuote;
-          if InQuote then
-          begin
-            if ParamNum = StartParam then
-              break;
-          end;
-          Inc(pTail);
-        end;
-        #1..#32:
-        begin
-          if (not InQuote) and (not (pCL[I - 1] in WHITESPACE)) then
-            Inc(ParamNum);
-          Inc(pTail);
-        end;
-      else
-        begin
-          if ParamNum = StartParam then
-            break
-          else
-            Inc(pTail);
-        end;
-      end; //case
-    end;
-  end;
-  result := pTail;
-end;
-
-function ShellExec(const Executable, Parameters, WorkingDirectory: UnicodeString;
-  const WindowStyle: TWindowStyle; const Wait, Quiet, Elevate: Boolean; var ResultCode: DWORD): Boolean;
-var
-  ShellExecuteInfo: TShellExecuteInfo;
-begin
-  FillChar(ShellExecuteInfo, SizeOf(ShellExecuteInfo), 0);
-  ShellExecuteInfo.cbSize := SizeOf(ShellExecuteInfo);
+  FillChar(SEI, SizeOf(SEI), 0);
+  SEI.cbSize := SizeOf(SEI);
   if Wait then
-    ShellExecuteInfo.fMask := ShellExecuteInfo.fMask or SEE_MASK_NOCLOSEPROCESS;
+    SEI.fMask := SEI.fMask or SEE_MASK_NOCLOSEPROCESS;
   if Quiet then
-    ShellExecuteInfo.fMask := ShellExecuteInfo.fMask or SEE_MASK_FLAG_NO_UI;
+    SEI.fMask := SEI.fMask or SEE_MASK_FLAG_NO_UI;
   if Elevate then
-    ShellExecuteInfo.lpVerb := 'runas'
+    SEI.lpVerb := 'runas'
   else
-    ShellExecuteInfo.lpVerb := 'open';
-  ShellExecuteInfo.lpFile := PWideChar(Executable);
+    SEI.lpVerb := 'open';
+  SEI.lpFile := PChar(Executable);
   if Parameters <> '' then
-    ShellExecuteInfo.lpParameters := PWideChar(Parameters)
+    SEI.lpParameters := PChar(Parameters)
   else
-    ShellExecuteInfo.lpParameters := nil;
+    SEI.lpParameters := nil;
   if WorkingDirectory <> '' then
-    ShellExecuteInfo.lpDirectory := PWideChar(WorkingDirectory)
+    SEI.lpDirectory := PChar(WorkingDirectory)
   else
-    ShellExecuteInfo.lpDirectory := nil;
-  ShellExecuteInfo.nShow := Integer(WindowStyle);
-  result := ShellExecuteExW(ShellExecuteInfo);
+    SEI.lpDirectory := nil;
+  SEI.nShow := Integer(WindowStyle);
+  result := ShellExecuteExW(SEI);
   if result then
   begin
     if Wait then
     begin
-      result := WaitForSingleObject(ShellExecuteInfo.hProcess,  // HANDLE hHandle
-        INFINITE) <> WAIT_FAILED;                               // DWORD  dwMilliseconds
+      result := WaitForSingleObject(SEI.hProcess,  // HANDLE hHandle
+        INFINITE) <> WAIT_FAILED;                  // DWORD  dwMilliseconds
       if result then
       begin
-        result := GetExitCodeProcess(ShellExecuteInfo.hProcess,  // HANDLE  hProcess
-          ResultCode);                                           // LPDWORD lpExitCode
+        result := GetExitCodeProcess(SEI.hProcess,  // HANDLE  hProcess
+          ResultCode);                              // LPDWORD lpExitCode
         if not result then
           ResultCode := GetLastError();
       end
@@ -226,7 +178,7 @@ begin
     end
     else
       ResultCode := 0;
-    CloseHandle(ShellExecuteInfo.hProcess);  // HANDLE hObject
+    CloseHandle(SEI.hProcess);  // HANDLE hObject
   end
   else
     ResultCode := GetLastError();

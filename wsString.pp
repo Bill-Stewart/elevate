@@ -1,4 +1,4 @@
-{ Copyright (C) 2021 by Bill Stewart (bstewart at iname.com)
+{ Copyright (C) 2021-2024 by Bill Stewart (bstewart at iname.com)
 
   This program is free software: you can redistribute it and/or modify it under
   the terms of the GNU General Public License as published by the Free Software
@@ -15,78 +15,49 @@
 
 }
 
-{$MODE OBJFPC}
-{$H+}
-
 unit wsString;
+
+{$MODE OBJFPC}
+{$MODESWITCH UNICODESTRINGS}
 
 interface
 
-function StringToUnicodeString(const S: string): UnicodeString;
-
-function UnicodeStringToString(const S: UnicodeString): string;
+function LowercaseString(const S: string): string;
 
 implementation
 
 uses
-  Windows;
+  windows;
 
-function StringToUnicodeString(const S: string): UnicodeString;
+function LowercaseString(const S: string): string;
 var
-  NumChars, BufSize: DWORD;
-  pBuffer: PWideChar;
+  Locale: LCID;
+  Len: DWORD;
+  pResult: PChar;
 begin
   result := '';
-  NumChars := MultiByteToWideChar(CP_OEMCP,  // UINT   CodePage
-    0,                                       // DWORD  dwFlags
-    PChar(S),                                // LPCCH  lpMultiByteStr
-    -1,                                      // int    cbMultiByte
-    nil,                                     // LPWSTR lpWideCharStr
-    0);                                      // int    cchWideChar
-  if NumChars > 0 then
+  if S = '' then
+    exit;
+  Locale := MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
+  Len := LCMapStringW(Locale,  // LCID    Locale
+    LCMAP_LOWERCASE,           // DWORD   dwMapFlags
+    PChar(S),                  // LPCWSTR lpSrcStr
+    -1,                        // int     cchSrc
+    nil,                       // LPWSTR  lpDestStr
+    0);                        // int     cchDest
+  if Len = 0 then
+    exit;
+  GetMem(pResult, Len * SizeOf(Char));
+  if LCMapStringW(Locale,  // LCID    Locale
+    LCMAP_LOWERCASE,       // DWORD   dwMapFlags
+    PChar(S),              // LPCWSTR lpSrcStr
+    -1,                    // int     cchSrc
+    pResult,               // LPWSTR  lpDestStr
+    Len) > 0 then          // int     cchDest
   begin
-    BufSize := NumChars * SizeOf(WideChar);
-    GetMem(pBuffer, BufSize);
-    if MultiByteToWideChar(CP_OEMCP,  // UINT   CodePage
-      0,                              // DWORD  dwFlags
-      PChar(S),                       // LPCCH  lpMultiByteStr
-      -1,                             // int    cbMultiByte
-      pBuffer,                        // LPWSTR lpWideCharStr
-      NumChars) > 0 then              // int    cchWideChar
-      result := UnicodeString(pBuffer);
-    FreeMem(pBuffer, BufSize);
+    result := string(pResult);
   end;
-end;
-
-function UnicodeStringToString(const S: UnicodeString): string;
-var
-  NumChars, BufSize: DWORD;
-  pBuffer: PChar;
-begin
-  result := '';
-  NumChars := WideCharToMultiByte(CP_OEMCP,  // UINT   CodePage
-    0,                                       // DWORD  dwFlags
-    PWideChar(S),                            // LPCWCH lpWideCharStr
-    -1,                                      // int    cchWideChar
-    nil,                                     // LPSTR  lpMultiByteStr
-    0,                                       // int    cbMultiByte
-    nil,                                     // LPCCH  lpDefaultChar
-    nil);                                    // LPBOOL lpUsedDefaultChar
-  if NumChars > 0 then
-  begin
-    BufSize := NumChars * SizeOf(Char);
-    GetMem(pBuffer, BufSize);
-    if WideCharToMultiByte(CP_OEMCP,  // UINT   CodePage
-      0,                              // DWORD  dwFlags
-      PWideChar(S),                   // LPCWCH lpWideCharStr
-      -1,                             // int    cchWideChar
-      pBuffer,                        // LPSTR  lpMultiByteStr
-      NumChars,                       // int    cbMultiByte
-      nil,                            // LPCCH  lpDefaultChar
-      nil) > 0 then                   // LPBOOL lpUsedDefaultChar
-      result := string(pBuffer);
-    FreeMem(pBuffer, BufSize);
-  end;
+  FreeMem(pResult);
 end;
 
 begin

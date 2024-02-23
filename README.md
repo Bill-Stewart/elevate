@@ -22,11 +22,12 @@ Note that in the usage descriptions below, all parameters are case-sensitive.
 
 **elevate** [**-n**] [**-q**] [**-w** _style_] **--** _command_ [_params_ [...]]
 
-Parameter      | Long Form                 | Description
----------      | ---------                 | -----------
-**-n**         | **--nowait**              | Don't wait for program to terminate
-**-q**         | **--quiet**               | Run quietly (no dialog boxes)
-**-w** _style_ | **--windowstyle=**_style_ | Specifies the window style
+Parameter      | Long Form                | Description
+---------      | ---------                | -----------
+**-n**         | **--nowait**             | Don't wait for program to end
+**-q**         | **--quiet**              | Run quietly (no dialog boxes)
+**-w** _style_ | **--windowstyle**_style_ | Specifies window style
+**-W** _dir_   | **--workingdir** _dir_   | Specifies working directory
 
 _style_ is one of: **Normal** **NormalNotActive** **Minimized** **MinimizedNotActive** **Maximized** **Hidden**
 
@@ -45,5 +46,4 @@ Parameter | Long Form   | Description
 **-q**    | **--quiet** | Run quietly (no dialog boxes)
 **-t**    | **--test**  | Test if current process is elevated
 
-With **-t** (**--test**), the exit code will be 0 if the current process is not elevated, or 1 if the current process is elevated.
-
+With **-t** (**--test**), the program's exit code will be 0 if the current process is not elevated, or 1 if the current process is elevated.
