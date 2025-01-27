@@ -1,5 +1,13 @@
 # elevate Version History
 
+## 1.2.0 (27 Jan 2025)
+
+* Fixed bug (**-W** option was being ignored).
+
+* Expanded and clarified documentation.
+
+* Cleaned up source a bit.
+
 ## 1.1.0 (23 Feb 2024)
 
 * Added **-W** (**--workingdir**) parameter.

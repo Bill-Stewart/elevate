@@ -1,4 +1,4 @@
-{ Copyright (C) 2021-2024 by Bill Stewart (bstewart at iname.com)
+{ Copyright (C) 2021-2025 by Bill Stewart (bstewart at iname.com)
 
   This program is free software: you can redistribute it and/or modify it under
   the terms of the GNU General Public License as published by the Free Software
@@ -37,7 +37,7 @@ type
 // Returns 0 if all APIs executed successfully. If any API failed, returns the
 // error code of the API that failed. If the function returns 0, then Elevated
 // will be true if the current process is elevated, or false otherwise.
-function IsElevated(var Elevated: Boolean): DWORD;
+function IsElevated(out Elevated: Boolean): DWORD;
 
 // Runs an executable using the ShellExecuteExW API. Returns true if all APIs
 // executed successfully, or false if any APIs failed. If the function returns
@@ -101,7 +101,7 @@ function ShellExecuteExW(var ShellExecuteInfo: TShellExecuteInfo): BOOL; stdcall
   external 'shell32.dll';
 
 // See MSDN API sample for CheckTokenMembership function
-function IsElevated(var Elevated: Boolean): DWORD;
+function IsElevated(out Elevated: Boolean): DWORD;
 const
   SECURITY_NT_AUTHORITY: TSIDIdentifierAuthority = (Value: (0, 0, 0, 0, 0, 5));
 var

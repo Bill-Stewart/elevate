@@ -1,4 +1,4 @@
-{ Copyright (C) 2021-2024 by Bill Stewart (bstewart at iname.com)
+{ Copyright (C) 2021-2025 by Bill Stewart (bstewart at iname.com)
 
   This program is free software: you can redistribute it and/or modify it under
   the terms of the GNU General Public License as published by the Free Software
@@ -26,13 +26,13 @@ program elevate;
 {$R *.res}
 
 // wargcv/wgetopts: https://github.com/Bill-Stewart/wargcv
+// WindowsString: https://github.com/Bill-Stewart/WindowsString
 uses
   windows,
   wargcv,
   wgetopts,
-  wsPath,
   wsProcess,
-  wsString;
+  WindowsString;
 
 const
   APP_TITLE = 'elevate';
@@ -55,7 +55,7 @@ procedure Usage();
 var
   Msg: string;
 begin
-  Msg := APP_TITLE + ' - Copyright (C) 2021-2024 by Bill Stewart (bstewart at iname.com)' + sLineBreak
+  Msg := APP_TITLE + ' - Copyright (C) 2021-2025 by Bill Stewart (bstewart at iname.com)' + sLineBreak
     + 'This is free software and comes with ABSOLUTELY NO WARRANTY.' + sLineBreak
     + sLineBreak
     + 'Usage 1:' + #9 + 'elevate [-n] [-q] [-w <style>] [-W dir] -- command [params [...]]' + sLineBreak
@@ -88,6 +88,17 @@ begin
     PChar(Msg),   // LPCWSTR lpText
     APP_TITLE,    // LPCWSTR lpCaption
     0);           // UINT    uType
+end;
+
+function DirExists(const DirName: string): Boolean;
+const
+  INVALID_FILE_ATTRIBUTES = DWORD(-1);
+var
+  Attrs: DWORD;
+begin
+  Attrs := GetFileAttributesW(PChar(DirName));  // LPCWSTR lpFileName
+  result := (Attrs <> INVALID_FILE_ATTRIBUTES) and
+    ((Attrs and FILE_ATTRIBUTE_DIRECTORY) <> 0);
 end;
 
 procedure TCommandLine.Parse();
@@ -157,7 +168,7 @@ begin
   Parameters := '';
   OptErr := false;  // no error output from GetOpts
   repeat
-    Opt := GetLongOpts('hnqtw:', @LongOpts, I);
+    Opt := GetLongOpts('hnqtw:W:', @LongOpts, I);
     case Opt of
       'h': Help := true;
       'n': Wait := false;
